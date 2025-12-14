@@ -1,13 +1,22 @@
 ﻿@page "/auth"
-
 @using Microsoft.AspNetCore.Authorization
-
 @attribute [Authorize]
 
-<PageTitle>Auth</PageTitle>
+<PageTitle>Авторизация</PageTitle>
 
-<h1>Вы успешно авторизовались</h1>
+<h1>✅ Вы авторизованы</h1>
 
 <AuthorizeView>
-    Привет @context.User.Identity?.Name!
+    @{
+        var user = context.User;
+        var email = user?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "Не указан";
+    }
+
+    <p>Добро пожаловать, <strong>@user?.Identity?.Name</strong>!</p>
+    <p>Ваш email: @email</p>
+
+    <div class="mt-4">
+        <a href="/" class="btn btn-primary">На главную</a>
+        <a href="/health" class="btn btn-outline-primary ms-2">Добавить запись</a>
+    </div>
 </AuthorizeView>
