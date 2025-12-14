@@ -1,7 +1,348 @@
 ﻿@page "/"
+@using HealthSystemApp.Data
+@using Microsoft.AspNetCore.Identity
+@inject HealthService HealthService
+@inject AuthenticationStateProvider AuthProvider
 
-<PageTitle>Home</PageTitle>
+<div class="dashboard">
+    <h2 class="mb-4">Обзор здоровья</h2>
 
-<h1>Hello, world!</h1>
+    <!-- Если записей нет -->
+    @if (!records.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            У вас еще нет записей.
+            <a href="health" class="alert-link">Добавьте первую запись</a> чтобы увидеть статистику.
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Карточка 1: Последний вес -->
+            <div class="col-md-3 mb-3">
+                <div class="card health-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-subtitle mb-2 text-muted">Последний вес</h6>
+                                <h4 class="card-title">@(lastRecord?.Weight?.ToString("0.0") ?? "-") кг</h4>
+                            </div>
+                            <div class="icon-circle bg-primary">
+                                <i class="bi bi-speedometer2"></i>
+                            </div>
+                        </div>
+                        <p class="card-text small text-muted">
+                            @if (lastRecord?.Date != null)
+                            {
+                                <span>@lastRecord.Date.ToString("dd.MM.yyyy")</span>
+                            }
+                            else
+                            {
+                                <span>Нет данных</span>
+                            }
+                        </p>
+                    </div>
+                </div>
+            </div>
 
-Welcome to your new app.
+            <!-- Карточка 2: Последнее давление -->
+            <div class="col-md-3 mb-3">
+                <div class="card health-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-subtitle mb-2 text-muted">Давление</h6>
+                                <h4 class="card-title">
+                                    @if (lastRecord?.SystolicPressure != null && lastRecord?.DiastolicPressure != null)
+                                    {
+                                        @($"{lastRecord.SystolicPressure}/{lastRecord.DiastolicPressure}")
+                                    }
+                                    else
+                                    {
+                                        <span>-</span>
+                                    }
+                                </h4>
+                            </div>
+                            <div class="icon-circle bg-success">
+                                <i class="bi bi-heart-pulse"></i>
+                            </div>
+                        </div>
+                        <p class="card-text small text-muted">
+                            @if (lastRecord?.SystolicPressure != null && lastRecord?.DiastolicPressure != null)
+                            {
+                                var status = GetPressureStatus(lastRecord.SystolicPressure.Value, lastRecord.DiastolicPressure.Value);
+                                <span class="@GetPressureStatusClass(status)">@status</span>
+                            }
+                            else
+                            {
+                                <span>Нет данных</span>
+                            }
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Карточка 3: Последний пульс -->
+            <div class="col-md-3 mb-3">
+                <div class="card health-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-subtitle mb-2 text-muted">Пульс</h6>
+                                <h4 class="card-title">@(lastRecord?.HeartRate?.ToString() ?? "-")</h4>
+                            </div>
+                            <div class="icon-circle bg-info">
+                                <i class="bi bi-activity"></i>
+                            </div>
+                        </div>
+                        <p class="card-text small text-muted">
+                            @if (lastRecord?.HeartRate != null)
+                            {
+                                var status = GetHeartRateStatus(lastRecord.HeartRate.Value);
+                                <span class="@GetHeartRateStatusClass(status)">@status</span>
+                            }
+                            else
+                            {
+                                <span>уд/мин</span>
+                            }
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Карточка 4: Всего записей -->
+            <div class="col-md-3 mb-3">
+                <div class="card health-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-subtitle mb-2 text-muted">Записей</h6>
+                                <h4 class="card-title">@records.Count</h4>
+                            </div>
+                            <div class="icon-circle bg-warning">
+                                <i class="bi bi-clipboard-data"></i>
+                            </div>
+                        </div>
+                        <p class="card-text small text-muted">
+                            @if (records.Any())
+                            {
+                                <span>За последние @GetDaysRange() дней</span>
+                            }
+                            else
+                            {
+                                <span>всего</span>
+                            }
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Последние 5 записей -->
+        <div class="recent-records mt-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Последние записи</h4>
+                <a href="health" class="btn btn-outline-primary btn-sm">Все записи →</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Дата</th>
+                            <th>Вес</th>
+                            <th>Давление</th>
+                            <th>Пульс</th>
+                            <th>Заметки</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var record in recentRecords.Take(5))
+                        {
+                            <tr>
+                                <td>@record.Date.ToString("dd.MM.yyyy")</td>
+                                <td>@(record.Weight?.ToString("0.0") ?? "-") кг</td>
+                                <td>
+                                    @if (record.SystolicPressure != null && record.DiastolicPressure != null)
+                                    {
+                                        @($"{record.SystolicPressure}/{record.DiastolicPressure}")
+                                    }
+                                    else
+                                    {
+                                        <span>-</span>
+                                    }
+                                </td>
+                                <td>@(record.HeartRate?.ToString() ?? "-")</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(record.Notes))
+                                    {
+                                        <span title="@record.Notes">@TruncateString(record.Notes, 30)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Статистика -->
+        <div class="stats-summary mt-4">
+            <h5>Статистика за @DateTime.Now.ToString("MMMM yyyy")</h5>
+            <div class="row mt-3">
+                <div class="col-md-4">
+                    <div class="stat-item">
+                        <span class="stat-label">Средний вес:</span>
+                        <span class="stat-value">@(averageWeight?.ToString("0.0") ?? "-") кг</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-item">
+                        <span class="stat-label">Среднее давление:</span>
+                        <span class="stat-value">
+                            @if (averageSystolic != null && averageDiastolic != null)
+                            {
+                                @($"{(int)averageSystolic}/{(int)averageDiastolic}")
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-item">
+                        <span class="stat-label">Средний пульс:</span>
+                        <span class="stat-value">@(averageHeartRate?.ToString("0") ?? "-")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<HealthRecord> records = new();
+    private HealthRecord? lastRecord;
+    private List<HealthRecord> recentRecords = new();
+    private double? averageWeight;
+    private double? averageSystolic;
+    private double? averageDiastolic;
+    private double? averageHeartRate;
+    private string? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserData();
+    }
+
+    private async Task LoadUserData()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                records = await HealthService.GetUserRecordsAsync(currentUserId);
+                await CalculateStatistics();
+            }
+        }
+    }
+
+    private async Task CalculateStatistics()
+    {
+        if (records.Any())
+        {
+            lastRecord = records.OrderByDescending(r => r.Date).FirstOrDefault();
+            recentRecords = records.OrderByDescending(r => r.Date).ToList();
+
+            // Средний вес
+            var weights = records.Where(r => r.Weight.HasValue).Select(r => r.Weight.Value);
+            averageWeight = weights.Any() ? weights.Average() : null;
+
+            // Среднее давление
+            var systolic = records.Where(r => r.SystolicPressure.HasValue).Select(r => r.SystolicPressure.Value);
+            var diastolic = records.Where(r => r.DiastolicPressure.HasValue).Select(r => r.DiastolicPressure.Value);
+            averageSystolic = systolic.Any() ? systolic.Average() : null;
+            averageDiastolic = diastolic.Any() ? diastolic.Average() : null;
+
+            // Средний пульс
+            var heartRates = records.Where(r => r.HeartRate.HasValue).Select(r => r.HeartRate.Value);
+            averageHeartRate = heartRates.Any() ? heartRates.Average() : null;
+        }
+    }
+
+    private async Task DeleteRecord(int id)
+    {
+        if (currentUserId != null)
+        {
+            await HealthService.DeleteRecordAsync(id, currentUserId);
+            await LoadUserData(); 
+        }
+    }
+
+    private string GetPressureStatus(int systolic, int diastolic)
+    {
+        if (systolic < 120 && diastolic < 80) return "Нормальное";
+        if (systolic >= 140 || diastolic >= 90) return "Повышенное";
+        return "Пограничное";
+    }
+
+    private string GetPressureStatusClass(string status)
+    {
+        return status switch
+        {
+            "Нормальное" => "text-success",
+            "Пограничное" => "text-warning",
+            "Повышенное" => "text-danger",
+            _ => "text-muted"
+        };
+    }
+
+    private string GetHeartRateStatus(int heartRate)
+    {
+        if (heartRate < 60) return "Брадикардия";
+        if (heartRate > 100) return "Тахикардия";
+        return "Нормальный";
+    }
+
+    private string GetHeartRateStatusClass(string status)
+    {
+        return status switch
+        {
+            "Нормальный" => "text-success",
+            "Брадикардия" => "text-warning",
+            "Тахикардия" => "text-danger",
+            _ => "text-muted"
+        };
+    }
+
+    private int GetDaysRange()
+    {
+        if (!records.Any()) return 0;
+
+        var dates = records.Select(r => r.Date);
+        var minDate = dates.Min();
+        var maxDate = dates.Max();
+
+        return (maxDate - minDate).Days + 1;
+    }
+
+    private string TruncateString(string value, int maxLength)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        return value.Length <= maxLength ? value : value.Substring(0, maxLength) + "...";
+    }
+}

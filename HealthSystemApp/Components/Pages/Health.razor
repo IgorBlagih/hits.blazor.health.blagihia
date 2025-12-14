@@ -1,0 +1,131 @@
+﻿@page "/health"
+@using HealthSystemApp.Data
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HealthService HealthService
+
+<PageTitle>Мое здоровье</PageTitle>
+
+<h1>Мониторинг здоровья</h1>
+
+<h3>Добавить новую запись</h3>
+<div class="card p-3 mb-3">
+    <form @onsubmit="AddRecord">
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Дата</label>
+                <input type="date" class="form-control" @bind="newRecord.Date" />
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Вес (кг)</label>
+                <input type="number" step="0.1" class="form-control" @bind="newRecord.Weight" />
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Давление (верх)</label>
+                <input type="number" class="form-control" @bind="newRecord.SystolicPressure" />
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Давление (низ)</label>
+                <input type="number" class="form-control" @bind="newRecord.DiastolicPressure" />
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Пульс</label>
+                <input type="number" class="form-control" @bind="newRecord.HeartRate" />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Заметки</label>
+            <input type="text" class="form-control" @bind="newRecord.Notes" />
+        </div>
+        <button type="submit" class="btn btn-primary">Добавить запись</button>
+    </form>
+</div>
+
+<h3>История записей</h3>
+@if (records == null)
+{
+    <p><em>Загрузка...</em></p>
+}
+else if (!records.Any())
+{
+    <p>У вас пока нет записей. Добавьте первую!</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Дата</th>
+                <th>Вес</th>
+                <th>Давление</th>
+                <th>Пульс</th>
+                <th>Заметки</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var record in records)
+            {
+                <tr>
+                    <td>@record.Date.ToShortDateString()</td>
+                    <td>@(record.Weight?.ToString("0.0") ?? "—")</td>
+                    <td>
+                        @if (record.SystolicPressure.HasValue && record.DiastolicPressure.HasValue)
+                        {
+                            <text>@record.SystolicPressure/@record.DiastolicPressure</text>
+                        }
+                        else
+                        {
+                            <text>—</text>
+                        }
+                    </td>
+                    <td>@(record.HeartRate?.ToString() ?? "—")</td>
+                    <td>@record.Notes</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteRecord(record.Id)">
+                            Удалить
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<HealthRecord>? records;
+    private HealthRecord newRecord = new();
+    private string? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        currentUserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (currentUserId != null)
+        {
+            records = await HealthService.GetUserRecordsAsync(currentUserId);
+        }
+    }
+
+    private async Task AddRecord()
+    {
+        if (currentUserId != null)
+        {
+            await HealthService.AddRecordAsync(newRecord, currentUserId);
+            newRecord = new HealthRecord(); // Сбрасываем форму
+            records = await HealthService.GetUserRecordsAsync(currentUserId); // Обновляем список
+        }
+    }
+
+    private async Task DeleteRecord(int id)
+    {
+        if (currentUserId != null)
+        {
+            await HealthService.DeleteRecordAsync(id, currentUserId);
+            records = await HealthService.GetUserRecordsAsync(currentUserId);
+        }
+    }
+}

@@ -1,0 +1,116 @@
+﻿@page "/health-chart"
+@using Microsoft.AspNetCore.Authorization
+@using HealthSystemApp.Data
+@attribute [Authorize]
+@inject HealthService HealthService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+
+<PageTitle>Статистика здоровья</PageTitle>
+
+<h1>Статистика показателей</h1>
+
+@if (records == null)
+{
+    <p><em>Загрузка данных...</em></p>
+}
+else if (!records.Any())
+{
+    <p>Нет данных для отображения. Добавьте записи на странице "Здоровье".</p>
+}
+else
+{
+    <div class="row mt-4">
+        <div class="col-md-12">
+            
+            <div class="card">
+                <div class="card-body">
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <td>Всего записей:</td>
+                                <td><strong>@records.Count</strong></td>
+                            </tr>
+                            @if (hasWeightData)
+                            {
+                                <tr>
+                                    <td>Средний вес:</td>
+                                    <td><strong>@(averageWeight?.ToString("0.0") ?? "—") кг</strong></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h4>Последние 10 записей</h4>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Вес</th>
+                        <th>Давление</th>
+                        <th>Пульс</th>
+                        <th>Заметки</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var record in records.Take(10))
+                    {
+                        <tr>
+                            <td>@record.Date.ToShortDateString()</td>
+                            <td>@(record.Weight?.ToString("0.0") ?? "—")</td>
+                            <td>
+                                @if (record.SystolicPressure.HasValue && record.DiastolicPressure.HasValue)
+                                {
+                                    <text>@record.SystolicPressure/@record.DiastolicPressure</text>
+                                }
+                                else
+                                {
+                                    <text>—</text>
+                                }
+                            </td>
+                            <td>@(record.HeartRate?.ToString() ?? "—")</td>
+                            <td>@(string.IsNullOrEmpty(record.Notes) ? "—" : record.Notes)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    private List<HealthRecord>? records;
+    private bool hasWeightData;
+    private double? averageWeight;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (userId != null)
+        {
+            records = await HealthService.GetUserRecordsAsync(userId);
+            CalculateStatistics();
+        }
+    }
+
+    private void CalculateStatistics()
+    {
+        if (records == null || !records.Any()) return;
+
+        // Статистика по весу
+        var weightRecords = records.Where(r => r.Weight.HasValue).ToList();
+        hasWeightData = weightRecords.Any();
+        if (hasWeightData)
+        {
+            averageWeight = weightRecords.Average(r => r.Weight!.Value);
+        }
+    }
+}

@@ -1,3 +1,4 @@
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
@@ -11,6 +12,7 @@ a, .btn-link {
     background-color: #1b6ec2;
     border-color: #1861ac;
 }
+
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
   box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
@@ -42,10 +44,103 @@ h1:focus {
     color: white;
 }
 
-    .blazor-error-boundary::after {
+.blazor-error-boundary::after {
         content: "An error has occurred."
-    }
+}
 
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
+}
+/* Стили для главной страницы с данными */
+
+.health-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transition: transform 0.2s;
+    height: 100%;
+}
+
+    .health-card:hover {
+        transform: translateY(-5px);
+    }
+
+.icon-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+/* Цвета для иконок */
+.bg-primary {
+    background-color: #3b82f6 !important;
+}
+
+.bg-success {
+    background-color: #10b981 !important;
+}
+
+.bg-info {
+    background-color: #06b6d4 !important;
+}
+
+.bg-warning {
+    background-color: #f59e0b !important;
+}
+
+/* Статистика */
+.stat-item {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #3b82f6;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #212529;
+}
+
+/* Таблица */
+.table-hover tbody tr:hover {
+    background-color: rgba(0,123,255,0.05);
+}
+
+/* Цвета статусов */
+.text-success {
+    color: #10b981 !important;
+}
+
+.text-warning {
+    color: #f59e0b !important;
+}
+
+.text-danger {
+    color: #ef4444 !important;
+}
+
+/* Отзывчивость */
+@media (max-width: 768px) {
+    .health-card .card-title {
+        font-size: 1.25rem;
+    }
+
+    .icon-circle {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
 }

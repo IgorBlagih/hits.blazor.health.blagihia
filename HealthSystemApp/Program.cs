@@ -21,6 +21,7 @@ namespace HealthSystemApp
             builder.Services.AddScoped<IdentityUserAccessor>();
             builder.Services.AddScoped<IdentityRedirectManager>();
             builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+            builder.Services.AddScoped<HealthService>();
 
             builder.Services.AddAuthentication(options =>
                 {

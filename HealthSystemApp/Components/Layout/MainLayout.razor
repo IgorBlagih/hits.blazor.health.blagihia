@@ -1,13 +1,26 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="page">
+    <!-- бургер меню для телефона -->
+    <button class="mobile-menu-btn" onclick="toggleNavMenu()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+        </svg>
+    </button>
+
     <div class="sidebar">
         <NavMenu />
     </div>
 
     <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        <!-- Верхняя панель -->
+        <div class="top-panel">
+            <div class="page-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 10px;">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                </svg>
+                Система мониторинга здоровья
+            </div>
         </div>
 
         <article class="content px-4">
@@ -21,3 +34,16 @@
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
+
+<script>
+    function toggleNavMenu() {
+        try {
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar && sidebar.classList) {
+                sidebar.classList.toggle('mobile-open');
+            }
+        } catch (error) {
+            console.warn('Toggle menu error:', error);
+        }
+    }
+</script>
